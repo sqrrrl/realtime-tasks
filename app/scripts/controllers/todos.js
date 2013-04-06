@@ -1,20 +1,6 @@
-/**
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 'use strict';
 
-angular.module('todos').controller('MainCtrl', ['$scope', '$routeParams', 'realtimeDocument',
+angular.module('todos').controller('MainCtrl', ['$scope', '$routeParams', 'todoStorage', 'filterFilter',
   /**
    * Controller for editing the tasks lists
    *
@@ -23,37 +9,30 @@ angular.module('todos').controller('MainCtrl', ['$scope', '$routeParams', 'realt
    * @param document
    * @constructor
    */
-  function ($scope, $routeParams, document) {
+  function ($scope, $routeParams, todoStorage, filterFilter) {
     $scope.fileId = $routeParams.fileId;
     $scope.filter = $routeParams.filter;
 
     $scope.document = document;
-    $scope.todos = document.getModel().getRoot().get('todos');
+    $scope.todos = todoStorage.get();
     $scope.newTodo = '';
+    $scope.remainingCount = filterFilter($scope.todos, {completed: false}).length;
 
 
-    /**
-     * Count the number of incomplete todo items.
-     *
-     * @returns {number}
-     */
-    $scope.remainingCount = function () {
-      var remaining = 0;
-      angular.forEach(this.todos.asArray(), function (todo) {
-        remaining += todo.completed ? 0 : 1;
-      });
-      return remaining;
-    };
-
-    /**
+      /**
      * Add a new todo item to the list, resets the new item text.
      */
     $scope.addTodo = function () {
-      if (this.newTodo) {
-        var todo = document.getModel().create(app.Todo, this.newTodo);
-        this.newTodo = '';
-        this.todos.push(todo);
-      }
+      if ($scope.newTodo.length === 0) return;
+
+      $scope.todos.push({
+        title: $scope.newTodo,
+        completed: false
+      });
+      todoStorage.put($scope.todos);
+
+      $scope.newTodo = '';
+      $scope.remainingCount++;
     };
 
     /**
@@ -68,6 +47,8 @@ angular.module('todos').controller('MainCtrl', ['$scope', '$routeParams', 'realt
      */
     $scope.doneEditing = function () {
       $scope.editedTodo = null;
+      if ( !todo.title ) $scope.removeTodo(todo);
+      todoStorage.put($scope.todos);
     };
 
     /**
@@ -76,19 +57,24 @@ angular.module('todos').controller('MainCtrl', ['$scope', '$routeParams', 'realt
      * @param todo
      */
     $scope.removeTodo = function (todo) {
-      this.todos.removeValue(todo);
+      $scope.remainingCount -= todo.completed ? 0 : 1;
+      $scope.todos.splice($scope.todos.indexOf(todo), 1);
+      todoStorage.put($scope.todos);
+    };
+
+    $scope.todoCompleted = function( todo ) {
+      todo.completed ? $scope.remainingCount-- : $scope.remainingCount++;
+      todoStorage.put($scope.todos);
     };
 
     /**
      * Remove all completed todos from the list
      */
     $scope.clearDoneTodos = function () {
-      var todos = this.todos;
-      angular.forEach(this.todos.asArray(), function (todo) {
-        if (todo.completed) {
-          todos.removeValue(todo);
-        }
+      $scope.todos = $scope.todos.filter(function( val ) {
+        return !val.completed;
       });
+      todoStorage.put($scope.todos);
     };
 
     /**
@@ -97,9 +83,11 @@ angular.module('todos').controller('MainCtrl', ['$scope', '$routeParams', 'realt
      * @param done
      */
     $scope.markAll = function (done) {
-      angular.forEach(this.todos.asArray(), function (todo) {
+      $scope.todos.forEach(function( todo ) {
         todo.completed = done;
       });
+      $scope.remainingCount = done ? 0 : $scope.todos.length;
+      todoStorage.put($scope.todos);
     };
 
     $scope.$watch('filter', function (filter) {
@@ -107,45 +95,9 @@ angular.module('todos').controller('MainCtrl', ['$scope', '$routeParams', 'realt
       { completed: false } : (filter === 'completed') ?
       { completed: true } : null;
     });
-  }]
-);
-
-angular.module('todos').controller('CollaboratorsCtrl', ['$scope', 'config',
-  /**
-   * Controller for displaying the list of current collaborators. Expects
-   * to inherit the document from a parent scope.
-   *
-   * @param {angular.Scope} $scope
-   * @param {object} config
-   * @constructor
-   */
-  function ($scope, config) {
-    var appId = config.clientId.split('.').shift();
-
-    var collaboratorListener = function () {
-      $scope.$apply(function () {
-        $scope.collaborators = $scope.document.getCollaborators();
-      });
-    };
-    $scope.collaborators = $scope.document.getCollaborators();
-
-    $scope.document.addEventListener(gapi.drive.realtime.EventType.COLLABORATOR_LEFT, collaboratorListener);
-    $scope.document.addEventListener(gapi.drive.realtime.EventType.COLLABORATOR_JOINED, collaboratorListener);
-
-    $scope.$on('$destroy', function () {
-      var doc = $scope.document;
-      if (doc) {
-        doc.removeEventListener(gapi.drive.realtime.EventType.COLLABORATOR_LEFT, collaboratorListener);
-        doc.removeEventListener(gapi.drive.realtime.EventType.COLLABORATOR_JOINED, collaboratorListener);
-      }
+        
+    $scope.$watch('remainingCount == 0', function( val ) {
+      $scope.allChecked = val;
     });
-
-    $scope.share = function () {
-      var fileId = this.fileId;
-      var client = new gapi.drive.share.ShareClient(appId);
-      client.setItemIds([fileId]);
-      client.showSettingsDialog();
-    };
-
   }]
 );

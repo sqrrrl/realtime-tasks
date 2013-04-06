@@ -2,7 +2,7 @@
 <!--[if lt IE 7]>      <html class="no-js lt-ie9 lt-ie8 lt-ie7"> <![endif]-->
 <!--[if IE 7]>         <html class="no-js lt-ie9 lt-ie8"> <![endif]-->
 <!--[if IE 8]>         <html class="no-js lt-ie9"> <![endif]-->
-<!--[if gt IE 8]><!--> <html class="no-js"> <!--<![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" ng-app="todos"> <!--<![endif]-->
   <head>
     <meta charset="utf-8"/>
     <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1"/>
@@ -26,22 +26,13 @@
 <!--    <div class="container" data-ng-view></div> -->
     <section data-ng-view></section>
 
-
-    <script src="//apis.google.com/js/client:plusone.js"></script>
-    <script src="//apis.google.com/js/api.js"></script>
-
-    <script src="components/jquery/jquery.js"></script>
     <script src="components/angular/angular.js"></script>
 
     <!-- build:js scripts/scripts.js -->
     <script src="scripts/app.js"></script>
     <script src="scripts/services/storage.js"></script>
     <script src="scripts/directives/on-blur.js"></script>
-    <script src="scripts/directives/collaborative.js"></script>
     <script src="scripts/directives/focus.js"></script>
-
-    <script src="scripts/controllers/install.js"></script>
-    <script src="scripts/controllers/create.js"></script>
     <script src="scripts/controllers/todos.js"></script>
     <!-- endbuild -->
 
